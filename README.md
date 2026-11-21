@@ -121,3 +121,7 @@ rm -rf /Applications/ClaudeLight.app ~/.claude-light
 ```
 
 Then right-click the widget and choose *Quit Claude Light*.
+
+## License
+
+[MIT](LICENSE). Claude Light is an independent project and is not affiliated with or endorsed by Anthropic.
