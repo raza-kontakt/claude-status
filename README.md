@@ -1,14 +1,113 @@
 # Claude Light
 
-A tiny floating traffic light for macOS: **red** while Claude Code is working, **green** when it's finished.
+<img src="Resources/AppIcon-preview.png" alt="Claude Light icon" width="128" align="right">
 
-One step: `scripts/setup.sh` (builds, connects Claude Code, opens the widget). Or manually:
+A tiny floating traffic light for macOS that shows what [Claude Code](https://claude.com/claude-code) is doing:
+
+- 🔴 **Red**: Claude is working.
+- 🟢 **Green**: Claude has finished (or is waiting for you).
+
+The widget is small, stays on top of other windows, never steals focus, and can be dragged anywhere. It remembers where you put it.
+
+## How it works
+
+Claude Code [hooks](https://docs.claude.com/en/docs/claude-code/hooks) call a small helper (`claude-light-hook`) on each event. The helper writes one state file per session to `~/.claude-light/sessions/`. The app polls that folder four times a second and lights the lamp.
+
+| Hook event | Light |
+|---|---|
+| `UserPromptSubmit`, `PreToolUse`, `PostToolUse` | Red |
+| `Stop`, `Notification` | Green |
+| `SessionEnd` | Session removed |
+
+With several Claude Code sessions open, the light is red if **any** session is working. A session that has been "working" for over 10 minutes with no events is treated as stale and no longer holds the light red, so a crashed session can't leave it stuck.
+
+The hook is fast (about 16 ms median), always exits 0 and prints nothing, so it can't slow down or break Claude Code.
+
+## Requirements
+
+- macOS 13 or later
+- Swift 6 toolchain (Xcode or the Command Line Tools). There is no Xcode project, only Swift Package Manager.
+- Claude Code
+
+## Install
 
 ```bash
-scripts/build-app.sh                                   # builds build/ClaudeLight.app
-open build/ClaudeLight.app                             # shows the widget (drag it anywhere; right-click to quit)
-build/ClaudeLight.app/Contents/MacOS/claude-light-install install     # connect Claude Code (edits ~/.claude/settings.json)
-build/ClaudeLight.app/Contents/MacOS/claude-light-install uninstall   # remove only our hooks
-swift test
+git clone https://github.com/raza-kontakt/claude-status.git
+cd claude-status
+scripts/setup.sh
 ```
-Restart running Claude Code sessions after installing so they pick up the hooks. Built with Spec Kit; see `specs/001-claude-traffic-light/`.
+
+`setup.sh` builds the app, installs the hooks and opens the widget. Restart any running Claude Code sessions so they pick up the hooks.
+
+To keep it in Applications:
+
+```bash
+cp -R build/ClaudeLight.app /Applications/
+/Applications/ClaudeLight.app/Contents/MacOS/claude-light-install uninstall
+/Applications/ClaudeLight.app/Contents/MacOS/claude-light-install install --hook /Applications/ClaudeLight.app/Contents/MacOS/claude-light-hook
+```
+
+(Uninstall first: `install` leaves entries that already exist untouched, so it won't change their path.)
+
+The app is ad-hoc signed, not notarized. It runs fine when built locally.
+
+## Usage
+
+- **Move**: drag the widget anywhere.
+- **Quit**: right-click, then *Quit Claude Light*.
+- It has no Dock icon and does not start at login. Open it again after a reboot.
+
+## Hooks and your settings
+
+The installer edits `~/.claude/settings.json` carefully:
+
+- It adds its hooks without touching your other settings or hooks.
+- It is idempotent, so running it twice doesn't duplicate entries.
+- It refuses to edit a file that isn't valid JSON.
+- `uninstall` removes only its own entries (matched by `claude-light-hook`).
+
+The hooks use the absolute path of the app they were installed from. If you move or delete the app, run `uninstall` and `install` again.
+
+## Development
+
+```bash
+swift build                      # debug build
+swift test                       # unit tests (state machine, parsing, installer, position)
+scripts/build-app.sh             # build/ClaudeLight.app
+scripts/verify-render.sh         # render the widget red/green offscreen and check the pixels
+scripts/make-icns.sh             # regenerate Resources/AppIcon.icns
+```
+
+Handy flags and variables:
+
+| | |
+|---|---|
+| `ClaudeLight --snapshot out.png red\|green` | Render the widget to a PNG |
+| `--selftest-quit`, `--selftest-drag` | Check the right-click menu and dragging |
+| `CLAUDE_LIGHT_DEBUG=1` | Log light changes to stderr |
+| `CLAUDE_LIGHT_DIR=/path` | Use a different state folder (default `~/.claude-light`) |
+| `claude-light-install --settings PATH` | Install into a different settings file (for testing) |
+
+### Layout
+
+```
+Sources/
+  ClaudeLightCore/        state machine, signal parsing, state store, settings installer, position store
+  claude-light-app/       floating SwiftUI/AppKit widget
+  claude-light-hook/      the hook helper Claude Code calls
+  claude-light-install/   install / uninstall CLI
+Tests/ClaudeLightCoreTests/
+scripts/                  build, setup, verification, icon generation
+specs/001-claude-traffic-light/   Spec Kit spec, plan, tasks, contracts
+```
+
+This project was built with [GitHub Spec Kit](https://github.com/github/spec-kit). The spec, plan and task list are in `specs/001-claude-traffic-light/`.
+
+## Uninstall
+
+```bash
+build/ClaudeLight.app/Contents/MacOS/claude-light-install uninstall
+rm -rf /Applications/ClaudeLight.app ~/.claude-light
+```
+
+Then right-click the widget and choose *Quit Claude Light*.

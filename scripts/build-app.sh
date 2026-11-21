@@ -4,7 +4,8 @@ cd "$(dirname "$0")/.."
 swift build -c release
 APP=build/ClaudeLight.app
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp .build/release/claude-light-app "$APP/Contents/MacOS/ClaudeLight"
 cp .build/release/claude-light-hook .build/release/claude-light-install "$APP/Contents/MacOS/"
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -14,6 +15,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <key>CFBundleName</key><string>ClaudeLight</string>
 <key>CFBundleIdentifier</key><string>dev.claudelight.app</string>
 <key>CFBundleExecutable</key><string>ClaudeLight</string>
+<key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>1.0</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
