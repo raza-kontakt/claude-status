@@ -1,9 +1,18 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-ARCHS="--arch arm64 --arch x86_64"   # universal: Apple Silicon + Intel
-swift build -c release $ARCHS
-BIN=$(swift build -c release $ARCHS --show-bin-path)
+# Universal binary (Apple Silicon + Intel): build each arch in its own scratch dir, then merge with lipo.
+# (Separate per-arch builds are more portable across toolchains than one multi-arch build.)
+UNI=build/universal
+rm -rf "$UNI"; mkdir -p "$UNI"
+build_arch() { swift build -c release --triple "$1-apple-macosx13.0" --scratch-path ".build/$1" "${@:2}"; }
+for arch in arm64 x86_64; do build_arch "$arch"; done
+for bin in claude-light-app claude-light-hook claude-light-install; do
+  lipo -create -output "$UNI/$bin" \
+    "$(build_arch arm64 --show-bin-path)/$bin" \
+    "$(build_arch x86_64 --show-bin-path)/$bin"
+done
+BIN="$UNI"
 APP=build/ClaudeLight.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
