@@ -9,6 +9,14 @@ A tiny floating traffic light for macOS that shows what [Claude Code](https://cl
 
 The widget is small, stays on top of other windows, never steals focus, and can be dragged anywhere. It remembers where you put it.
 
+<p align="center">
+  <img src="docs/red.png" alt="Claude Light showing red: Claude is working" height="180">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/green.png" alt="Claude Light showing green: Claude has finished" height="180">
+  <br>
+  <sub>Red: Claude is working &nbsp;·&nbsp; Green: Claude has finished</sub>
+</p>
+
 ## How it works
 
 Claude Code [hooks](https://docs.claude.com/en/docs/claude-code/hooks) call a small helper (`claude-light-hook`) on each event. The helper writes one state file per session to `~/.claude-light/sessions/`. The app polls that folder four times a second and lights the lamp.
@@ -85,6 +93,7 @@ Handy flags and variables:
 |---|---|
 | `ClaudeLight --snapshot out.png red\|green` | Render the widget to a PNG |
 | `--selftest-quit`, `--selftest-drag`, `--selftest-login` | Check the right-click menu, dragging and the Start at Login toggle (`--selftest-login` flips the setting) |
+| `CLAUDE_LIGHT_SNAPSHOT_SCALE=6`, `CLAUDE_LIGHT_SNAPSHOT_TRANSPARENT=1` | Hi-res, transparent snapshots (how `docs/*.png` were made) |
 | `CLAUDE_LIGHT_DEBUG=1` | Log light changes to stderr |
 | `CLAUDE_LIGHT_DIR=/path` | Use a different state folder (default `~/.claude-light`) |
 | `claude-light-install --settings PATH` | Install into a different settings file (for testing) |

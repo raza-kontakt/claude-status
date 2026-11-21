@@ -98,8 +98,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @MainActor func snapshot(path: String, state: String) {
     let model = LightModel()
     model.light = state == "red" ? .red : .green
-    let renderer = ImageRenderer(content: TrafficLightView(model: model).background(Color.white))
-    renderer.scale = 1
+    // Optional env overrides for documentation shots; defaults match the pixel check (1x, white backdrop).
+    let env = ProcessInfo.processInfo.environment
+    let backdrop = env["CLAUDE_LIGHT_SNAPSHOT_TRANSPARENT"] != nil ? Color.clear : Color.white
+    let renderer = ImageRenderer(content: TrafficLightView(model: model).background(backdrop))
+    renderer.scale = CGFloat(Double(env["CLAUDE_LIGHT_SNAPSHOT_SCALE"] ?? "") ?? 1)
     guard let cg = renderer.cgImage else { FileHandle.standardError.write(Data("render failed\n".utf8)); exit(1) }
     let rep = NSBitmapImageRep(cgImage: cg)
     try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: path))
