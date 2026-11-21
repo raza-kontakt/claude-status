@@ -123,6 +123,17 @@ Handy flags and variables:
 | `CLAUDE_LIGHT_DIR=/path` | Use a different state folder (default `~/.claude-light`) |
 | `claude-light-install --settings PATH` | Install into a different settings file (for testing) |
 
+### Releasing
+
+Push a version tag and the **Release** workflow builds, tests and publishes a GitHub release with the universal app zip and its SHA-256:
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+The tag's version is stamped into the app (`CFBundleShortVersionString`). To try the pipeline without publishing, run *Actions > Release > Run workflow*: it builds the zip and uploads it as a run artifact only. Locally, `VERSION=1.1.0 scripts/build-app.sh` does the same stamping.
+
 ### Layout
 
 ```

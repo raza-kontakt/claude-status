@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+VERSION="${VERSION:-1.0.0}"   # release workflow passes the tag without the leading v
 # Universal binary (Apple Silicon + Intel): build each arch in its own scratch dir, then merge with lipo.
 # (Separate per-arch builds are more portable across toolchains than one multi-arch build.)
 UNI=build/universal
@@ -28,7 +29,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <key>CFBundleExecutable</key><string>ClaudeLight</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>1.0</string>
+<key>CFBundleShortVersionString</key><string>$VERSION</string>
+<key>CFBundleVersion</key><string>$VERSION</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>LSUIElement</key><true/>
 </dict></plist>
@@ -37,4 +39,4 @@ PLIST
 codesign --force --sign - "$APP/Contents/MacOS/claude-light-hook" "$APP/Contents/MacOS/claude-light-install"
 codesign --force --deep --sign - "$APP"
 codesign --verify --deep --strict "$APP"
-echo "Built $APP"
+echo "Built $APP ($VERSION)"

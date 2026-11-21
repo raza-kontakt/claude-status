@@ -1,0 +1,97 @@
+name: Release
+
+# Push a tag like v1.2.0 to build, test and publish a GitHub release with the app zip.
+# Run manually (Actions > Release > Run workflow) for a dry run that only uploads the zip as an artifact.
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version for the dry run (no leading v)
+        default: 0.0.0-dryrun
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out version
+        id: v
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then V="${GITHUB_REF_NAME#v}"; else V="${{ inputs.version }}"; fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Version: $V"
+
+      - name: Unit tests
+        run: swift test
+
+      - name: Build universal app
+        run: VERSION="${{ steps.v.outputs.version }}" scripts/build-app.sh
+
+      - name: Verify bundle
+        run: |
+          APP=build/ClaudeLight.app
+          lipo -archs "$APP/Contents/MacOS/ClaudeLight" | grep -q arm64
+          lipo -archs "$APP/Contents/MacOS/ClaudeLight" | grep -q x86_64
+          codesign --verify --deep --strict "$APP"
+          V=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")
+          test "$V" = "${{ steps.v.outputs.version }}"
+
+      - name: Render check
+        run: scripts/verify-render.sh
+
+      - name: Package
+        id: pkg
+        run: |
+          NAME="ClaudeLight-${{ steps.v.outputs.version }}-macos.zip"
+          mkdir -p dist
+          ditto -c -k --keepParent build/ClaudeLight.app "dist/$NAME"
+          (cd dist && shasum -a 256 "$NAME" > "$NAME.sha256")
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "sha=$(cut -d' ' -f1 "dist/$NAME.sha256")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact (dry run)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pkg.outputs.name }}
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<NOTES
+          A tiny floating traffic light for macOS: **red** while Claude Code is working, **green** when it's finished.
+
+          Universal build (Apple Silicon + Intel), macOS 13+.
+
+          **Install**
+          1. Unzip and drag \`ClaudeLight.app\` to \`/Applications\`.
+          2. The app is ad-hoc signed, not notarized. Clear the download flag, then open it:
+             \`\`\`
+             xattr -dr com.apple.quarantine /Applications/ClaudeLight.app
+             open /Applications/ClaudeLight.app
+             \`\`\`
+          3. Connect Claude Code (then restart running sessions):
+             \`\`\`
+             /Applications/ClaudeLight.app/Contents/MacOS/claude-light-install install
+             \`\`\`
+          4. Optional: right-click the widget and tick *Start at Login*.
+
+          SHA-256: \`${{ steps.pkg.outputs.sha }}\`
+          NOTES
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/${{ steps.pkg.outputs.name }}" "dist/${{ steps.pkg.outputs.name }}.sha256" \
+            --title "Claude Light ${{ steps.v.outputs.version }}" \
+            --notes-file notes.md \
+            --generate-notes \
+            --verify-tag
