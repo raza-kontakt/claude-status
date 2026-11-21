@@ -1,0 +1,15 @@
+# Build output
+.build/
+build/
+DerivedData/
+*.swiftpm/
+
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+
+# macOS / editors
+.DS_Store
+.vscode/
+.idea/
