@@ -1,13 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-swift build -c release
+ARCHS="--arch arm64 --arch x86_64"   # universal: Apple Silicon + Intel
+swift build -c release $ARCHS
+BIN=$(swift build -c release $ARCHS --show-bin-path)
 APP=build/ClaudeLight.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
-cp .build/release/claude-light-app "$APP/Contents/MacOS/ClaudeLight"
-cp .build/release/claude-light-hook .build/release/claude-light-install "$APP/Contents/MacOS/"
+cp "$BIN/claude-light-app" "$APP/Contents/MacOS/ClaudeLight"
+cp "$BIN/claude-light-hook" "$BIN/claude-light-install" "$APP/Contents/MacOS/"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -22,5 +24,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <key>LSUIElement</key><true/>
 </dict></plist>
 PLIST
-codesign --force --sign - "$APP" >/dev/null 2>&1 || true
+# Ad-hoc sign the helper binaries first, then the bundle (helpers live in Contents/MacOS).
+codesign --force --sign - "$APP/Contents/MacOS/claude-light-hook" "$APP/Contents/MacOS/claude-light-install"
+codesign --force --deep --sign - "$APP"
+codesign --verify --deep --strict "$APP"
 echo "Built $APP"

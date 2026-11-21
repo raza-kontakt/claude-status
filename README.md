@@ -37,7 +37,30 @@ The hook is fast (about 16 ms median), always exits 0 and prints nothing, so it 
 - Swift 6 toolchain (Xcode or the Command Line Tools). There is no Xcode project, only Swift Package Manager.
 - Claude Code
 
-## Install
+## Download
+
+Grab `ClaudeLight-<version>-macos.zip` from the [latest release](https://github.com/raza-kontakt/claude-status/releases/latest). It runs on Apple Silicon and Intel Macs (macOS 13+).
+
+1. Unzip it and drag **ClaudeLight.app** into `/Applications`.
+2. The app is ad-hoc signed, not notarized, so macOS blocks it on first launch. Clear the download flag once, then open it:
+
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/ClaudeLight.app
+   open /Applications/ClaudeLight.app
+   ```
+
+   (Or right-click the app, choose *Open*, then confirm.)
+3. Connect Claude Code, then restart any running Claude Code sessions:
+
+   ```bash
+   /Applications/ClaudeLight.app/Contents/MacOS/claude-light-install install
+   ```
+
+4. Optional: right-click the widget and tick *Start at Login*.
+
+To remove it, run the same installer with `uninstall`, then delete the app.
+
+## Build from source
 
 ```bash
 git clone https://github.com/raza-kontakt/claude-status.git
