@@ -1,4 +1,5 @@
 import SwiftUI
+import ServiceManagement
 import ClaudeLightCore
 
 final class LightModel: ObservableObject {
@@ -60,9 +61,36 @@ struct TrafficLightView: View {
     }
 }
 
-/// The right-click menu: a native menu on the hosting view (what AppKit shows on right-click).
-func makeQuitMenu() -> NSMenu {
+/// Start-at-login toggle, backed by the system's login items (macOS 13+).
+@MainActor final class LoginItemController: NSObject, NSMenuItemValidation {
+    static let shared = LoginItemController()
+    var isEnabled: Bool { SMAppService.mainApp.status == .enabled }
+
+    @objc func toggle(_ sender: Any?) {
+        do {
+            if isEnabled { try SMAppService.mainApp.unregister() } else { try SMAppService.mainApp.register() }
+        } catch {
+            FileHandle.standardError.write(Data("login item: \(error.localizedDescription)\n".utf8))
+            let alert = NSAlert()
+            alert.messageText = "Couldn't change Start at Login"
+            alert.informativeText = "Move Claude Light to the Applications folder and try again.\n\n\(error.localizedDescription)"
+            alert.runModal()
+        }
+    }
+
+    func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        item.state = isEnabled ? .on : .off
+        return true
+    }
+}
+
+/// The right-click menu: Start at Login toggle and Quit.
+@MainActor func makeQuitMenu() -> NSMenu {
     let menu = NSMenu()
+    let login = NSMenuItem(title: "Start at Login", action: #selector(LoginItemController.toggle(_:)), keyEquivalent: "")
+    login.target = LoginItemController.shared
+    menu.addItem(login)
+    menu.addItem(.separator())
     let item = NSMenuItem(title: "Quit Claude Light", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     item.target = NSApp
     menu.addItem(item)

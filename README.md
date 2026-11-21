@@ -55,7 +55,8 @@ The app is ad-hoc signed, not notarized. It runs fine when built locally.
 
 - **Move**: drag the widget anywhere.
 - **Quit**: right-click, then *Quit Claude Light*.
-- It has no Dock icon and does not start at login. Open it again after a reboot.
+- **Start at login**: right-click, then tick *Start at Login*. It uses the system's login items, so you can also manage it in System Settings > General > Login Items. Run the app from `/Applications` first, because macOS ties the login item to the app's location.
+- It has no Dock icon.
 
 ## Hooks and your settings
 
@@ -83,7 +84,7 @@ Handy flags and variables:
 | | |
 |---|---|
 | `ClaudeLight --snapshot out.png red\|green` | Render the widget to a PNG |
-| `--selftest-quit`, `--selftest-drag` | Check the right-click menu and dragging |
+| `--selftest-quit`, `--selftest-drag`, `--selftest-login` | Check the right-click menu, dragging and the Start at Login toggle (`--selftest-login` flips the setting) |
 | `CLAUDE_LIGHT_DEBUG=1` | Log light changes to stderr |
 | `CLAUDE_LIGHT_DIR=/path` | Use a different state folder (default `~/.claude-light`) |
 | `claude-light-install --settings PATH` | Install into a different settings file (for testing) |

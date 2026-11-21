@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.positions.save(self.panel.frame.origin)
         }
         panel.orderFrontRegardless()
+        if CommandLine.arguments.contains("--selftest-login") { MainActor.assumeIsolated { selfTestLogin(container) } }
         if CommandLine.arguments.contains("--selftest-quit") { selfTestQuit(container) }
         if CommandLine.arguments.contains("--selftest-drag") { selfTestDrag(container) }
     }
@@ -56,16 +57,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         exit(ok ? 0 : 4)
     }
 
+    /// Verification aid: invoke the "Start at Login" menu item and report the resulting login-item status.
+    @MainActor func selfTestLogin(_ host: NSView) {
+        guard let event = NSEvent.mouseEvent(with: .rightMouseDown, location: .zero, modifierFlags: [], timestamp: 0,
+                                             windowNumber: host.window?.windowNumber ?? 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1),
+              let menu = host.menu(for: event), let item = menu.items.first(where: { $0.title == "Start at Login" }) else {
+            FileHandle.standardError.write(Data("selftest: no Start at Login item\n".utf8)); exit(2)
+        }
+        let before = LoginItemController.shared.isEnabled
+        _ = menu.performActionForItem(at: menu.index(of: item))
+        _ = LoginItemController.shared.validateMenuItem(item)
+        print("login before=\(before) after=\(LoginItemController.shared.isEnabled) checkmark=\(item.state == .on)")
+        exit(0)
+    }
+
     /// Verification aid: obtain the right-click menu for the widget and activate its Quit item.
     func selfTestQuit(_ host: NSView) {
         guard let event = NSEvent.mouseEvent(with: .rightMouseDown, location: NSPoint(x: 10, y: 10), modifierFlags: [],
                                              timestamp: 0, windowNumber: panel.windowNumber, context: nil,
                                              eventNumber: 0, clickCount: 1, pressure: 1),
-              let menu = host.menu(for: event), let item = menu.items.first, item.title == "Quit Claude Light" else {
+              let menu = host.menu(for: event), let item = menu.items.first(where: { $0.title == "Quit Claude Light" }) else {
             FileHandle.standardError.write(Data("selftest: no Quit menu item\n".utf8)); exit(2)
         }
         FileHandle.standardError.write(Data("selftest: invoking '\(item.title)'\n".utf8))
-        menu.performActionForItem(at: 0)
+        menu.performActionForItem(at: menu.index(of: item))
         // If terminate did not end the process shortly, report failure.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             FileHandle.standardError.write(Data("selftest: app still running after Quit\n".utf8)); exit(3)
