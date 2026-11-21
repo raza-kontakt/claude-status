@@ -2,6 +2,8 @@
 
 <img src="Resources/AppIcon-preview.png" alt="Claude Light icon" width="128" align="right">
 
+[![CI](https://github.com/raza-kontakt/claude-status/actions/workflows/ci.yml/badge.svg)](https://github.com/raza-kontakt/claude-status/actions/workflows/ci.yml)
+
 A tiny floating traffic light for macOS that shows what [Claude Code](https://claude.com/claude-code) is doing:
 
 - 🔴 **Red**: Claude is working.
@@ -105,7 +107,7 @@ The hooks use the absolute path of the app they were installed from. If you move
 ```bash
 swift build                      # debug build
 swift test                       # unit tests (state machine, parsing, installer, position)
-scripts/build-app.sh             # build/ClaudeLight.app
+scripts/build-app.sh             # universal build/ClaudeLight.app (also run by CI on every push and PR)
 scripts/verify-render.sh         # render the widget red/green offscreen and check the pixels
 scripts/make-icns.sh             # regenerate Resources/AppIcon.icns
 ```
