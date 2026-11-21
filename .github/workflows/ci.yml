@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: swift --version
+
+      - name: Cache SwiftPM build
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.swift') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Build (debug)
+        run: swift build
+
+      - name: Unit tests
+        run: swift test
+
+      - name: Build universal app bundle
+        run: scripts/build-app.sh
+
+      - name: Verify bundle
+        run: |
+          APP=build/ClaudeLight.app
+          lipo -archs "$APP/Contents/MacOS/ClaudeLight" | grep -q arm64
+          lipo -archs "$APP/Contents/MacOS/ClaudeLight" | grep -q x86_64
+          codesign --verify --deep --strict "$APP"
+          test -f "$APP/Contents/Resources/AppIcon.icns"
+          echo '{"session_id":"ci","hook_event_name":"UserPromptSubmit"}' \
+            | CLAUDE_LIGHT_DIR="$RUNNER_TEMP/sessions" "$APP/Contents/MacOS/claude-light-hook"
+          test -f "$RUNNER_TEMP/sessions/ci.json"
+
+      - name: Render check (red/green pixels)
+        run: scripts/verify-render.sh
+
+      - name: Package app
+        run: |
+          mkdir -p dist
+          ditto -c -k --keepParent build/ClaudeLight.app dist/ClaudeLight-macos.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClaudeLight-macos
+          path: dist/ClaudeLight-macos.zip
+          if-no-files-found: error
