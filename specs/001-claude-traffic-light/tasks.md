@@ -35,3 +35,9 @@
 - [x] T018 Add scripts/setup.sh that builds, installs hooks and opens the app so setup takes two commands per SC-005 (partial)
 - [x] T019 Right-click Quit verified via `ClaudeLight --selftest-quit` (native menu fetched as a right-click does, Quit item activated, app exits 0); caught and fixed NSHostingView returning no menu
 - [x] T020 Document the --snapshot mode and CLAUDE_LIGHT_DEBUG log in plan.md as verification aids (unrequested)
+
+## Phase 9: Background-agent light (yellow)
+- [x] T021 Signal: SubagentStart/SubagentStop kinds and `agent_id` parsing; events fired from inside a subagent carry the agent id (FR-013)
+- [x] T022 SessionTracker/StateStore: per-session running-agent set, yellow when no session is working but an agent runs, 10-minute agent staleness, locked read-modify-write for concurrent hooks (FR-002, FR-013, FR-014)
+- [x] T023 SettingsInstaller adds the SubagentStart and SubagentStop hooks; re-running install upgrades an older install
+- [x] T024 Widget: third (yellow) lamp; verify-render.sh and check-pixels.swift check all three states; icon, docs screenshots and README updated (FR-001, FR-012)

@@ -21,15 +21,15 @@ ctx.restoreGState()
 NSGradient(colors: [NSColor(white: 0.30, alpha: 1), NSColor(white: 0.10, alpha: 1)])!.draw(in: bg, angle: -90)
 
 // Housing
-let housing = NSBezierPath(roundedRect: NSRect(x: 342, y: 212, width: 340, height: 600), xRadius: 120, yRadius: 120)
+let housing = NSBezierPath(roundedRect: NSRect(x: 372, y: 190, width: 280, height: 644), xRadius: 110, yRadius: 110)
 NSColor(white: 0.07, alpha: 1).setFill(); housing.fill()
 NSColor(white: 0.38, alpha: 1).setStroke(); housing.lineWidth = 10; housing.stroke()
 
 func lamp(center: NSPoint, color: NSColor, lit: Bool) {
-    let r: CGFloat = 112
+    let r: CGFloat = 84
     let rect = NSRect(x: center.x - r, y: center.y - r, width: 2 * r, height: 2 * r)
     ctx.saveGState()
-    if lit { ctx.setShadow(offset: .zero, blur: 70, color: color.withAlphaComponent(0.95).cgColor) }
+    if lit { ctx.setShadow(offset: .zero, blur: 60, color: color.withAlphaComponent(0.95).cgColor) }
     (lit ? color : color.withAlphaComponent(0.22)).setFill()
     NSBezierPath(ovalIn: rect).fill()
     ctx.restoreGState()
@@ -39,8 +39,9 @@ func lamp(center: NSPoint, color: NSColor, lit: Bool) {
     NSGradient(colors: [NSColor.white.withAlphaComponent(lit ? 0.6 : 0.1), .clear])!
         .draw(in: NSBezierPath(ovalIn: hl), relativeCenterPosition: NSPoint(x: -0.3, y: 0.3))
 }
-lamp(center: NSPoint(x: s / 2, y: 650), color: NSColor(red: 1, green: 0.15, blue: 0.12, alpha: 1), lit: false)
-lamp(center: NSPoint(x: s / 2, y: 374), color: NSColor(red: 0.1, green: 0.9, blue: 0.3, alpha: 1), lit: true)
+lamp(center: NSPoint(x: s / 2, y: 700), color: NSColor(red: 1, green: 0.15, blue: 0.12, alpha: 1), lit: false)
+lamp(center: NSPoint(x: s / 2, y: 512), color: NSColor(red: 1, green: 0.78, blue: 0.1, alpha: 1), lit: false)
+lamp(center: NSPoint(x: s / 2, y: 324), color: NSColor(red: 0.1, green: 0.9, blue: 0.3, alpha: 1), lit: true)
 
 NSGraphicsContext.restoreGraphicsState()
 try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: CommandLine.arguments[1]))

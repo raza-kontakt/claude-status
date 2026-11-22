@@ -52,6 +52,7 @@ struct TrafficLightView: View {
     var body: some View {
         VStack(spacing: 8) {
             LampView(color: Color(red: 1, green: 0.15, blue: 0.12), lit: model.light == .red, label: "Claude is working")
+            LampView(color: Color(red: 1, green: 0.78, blue: 0.1), lit: model.light == .yellow, label: "A background agent is running")
             LampView(color: Color(red: 0.1, green: 0.9, blue: 0.3), lit: model.light == .green, label: "Claude is finished")
         }
         .padding(9)

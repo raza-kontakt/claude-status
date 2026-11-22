@@ -70,8 +70,8 @@ The widget looks like a small vertical traffic-light housing with two round ligh
 
 ### Functional Requirements
 
-- **FR-001**: The widget MUST show exactly two lights, red and green, with at most one lit at a time.
-- **FR-002**: Red MUST be lit while any Claude session is working; green MUST be lit otherwise.
+- **FR-001**: The widget MUST show exactly three lights, red, yellow and green, with exactly one lit at a time. (Amended: yellow added for background agents; originally two lights.)
+- **FR-002**: Red MUST be lit while any Claude session is working (whether or not a background agent is also running); yellow MUST be lit when no session is working but a background agent is still running; green MUST be lit otherwise.
 - **FR-003**: A prompt submission or tool-start signal MUST mark a session as working; a finish, stop or session-end signal MUST mark it not working.
 - **FR-004**: The widget MUST track sessions independently and aggregate them per the edge case above.
 - **FR-005**: A working session with no signal for 10 minutes MUST be treated as not working.
@@ -82,6 +82,8 @@ The widget looks like a small vertical traffic-light housing with two round ligh
 - **FR-010**: The widget MUST float above other windows, be draggable, persist its position, hide from the Dock, and offer Quit.
 - **FR-011**: Ignore malformed signals.
 - **FR-012**: Lit lights MUST glow visibly distinct from dim lights (not colour alone: lit lights are also noticeably brighter).
+- **FR-013**: A background agent (subagent) MUST count as running from its start signal until its stop signal. Tool calls made by a subagent MUST NOT mark the main Claude as working.
+- **FR-014**: A background agent with no signal for 10 minutes MUST be treated as stopped, so a lost stop signal can't leave the light yellow.
 
 ### Key Entities
 

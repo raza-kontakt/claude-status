@@ -15,24 +15,46 @@ public struct StateStore {
         self.directory = directory
     }
 
-    private struct File: Codable { var state: SessionState; var updated: Double }
+    private struct File: Codable {
+        var state: SessionState
+        var updated: Double
+        var agents: [String: Double]?  // absent in files written by older versions
+    }
 
     private func url(_ id: String) -> URL { directory.appendingPathComponent("\(id).json") }
 
+    private func read(_ url: URL) -> SessionRecord? {
+        guard let data = try? Data(contentsOf: url), let f = try? JSONDecoder().decode(File.self, from: data) else { return nil }
+        return SessionRecord(state: f.state, updated: Date(timeIntervalSince1970: f.updated),
+                             agents: (f.agents ?? [:]).mapValues { Date(timeIntervalSince1970: $0) })
+    }
+
+    /// Applies one signal to that session's file. Hooks run concurrently (subagents fire in parallel),
+    /// so the read-modify-write is serialised with a lock file.
     public func write(_ signal: Signal, at now: Date = Date()) throws {
         guard Signal.isSafeID(signal.sessionID) else { return }
         let fm = FileManager.default
         try fm.createDirectory(at: directory, withIntermediateDirectories: true)
-        if signal.kind == .ended {
-            try? fm.removeItem(at: url(signal.sessionID))
+
+        let lockFD = open(directory.appendingPathComponent(".lock").path, O_CREAT | O_RDWR, 0o600)
+        if lockFD >= 0 { flock(lockFD, LOCK_EX) }
+        defer { if lockFD >= 0 { flock(lockFD, LOCK_UN); close(lockFD) } }
+
+        let id = signal.sessionID
+        var tracker = SessionTracker(sessions: read(url(id)).map { [id: $0] } ?? [:])
+        tracker.apply(signal, at: now)
+
+        guard let rec = tracker.sessions[id] else {
+            try? fm.removeItem(at: url(id))
             return
         }
-        let file = File(state: signal.kind == .working ? .working : .idle, updated: now.timeIntervalSince1970)
+        let file = File(state: rec.state, updated: rec.updated.timeIntervalSince1970,
+                        agents: rec.agents.isEmpty ? nil : rec.agents.mapValues { $0.timeIntervalSince1970 })
         let data = try JSONEncoder().encode(file)
         // Atomic: write temp in same dir, then rename over target.
-        let tmp = directory.appendingPathComponent(".\(signal.sessionID).\(UUID().uuidString).tmp")
+        let tmp = directory.appendingPathComponent(".\(id).\(UUID().uuidString).tmp")
         try data.write(to: tmp)
-        _ = try fm.replaceItemAt(url(signal.sessionID), withItemAt: tmp)
+        _ = try fm.replaceItemAt(url(id), withItemAt: tmp)
     }
 
     /// Reads all session files; ignores malformed ones; prunes idle files older than a day.
@@ -43,14 +65,12 @@ public struct StateStore {
             return SessionTracker()
         }
         for item in items where item.pathExtension == "json" && !item.lastPathComponent.hasPrefix(".") {
-            guard let data = try? Data(contentsOf: item),
-                  let f = try? JSONDecoder().decode(File.self, from: data) else { continue }
-            let updated = Date(timeIntervalSince1970: f.updated)
-            if now.timeIntervalSince(updated) > 86_400 {
+            guard let rec = read(item) else { continue }
+            if now.timeIntervalSince(rec.updated) > 86_400 {
                 try? fm.removeItem(at: item)
                 continue
             }
-            out[item.deletingPathExtension().lastPathComponent] = SessionRecord(state: f.state, updated: updated)
+            out[item.deletingPathExtension().lastPathComponent] = rec
         }
         return SessionTracker(sessions: out)
     }

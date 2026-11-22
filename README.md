@@ -6,17 +6,20 @@
 
 A tiny floating traffic light for macOS that shows what [Claude Code](https://claude.com/claude-code) is doing:
 
-- 🔴 **Red**: Claude is working.
-- 🟢 **Green**: Claude has finished (or is waiting for you).
+- 🔴 **Red**: Claude is working (even if a background agent is also running).
+- 🟡 **Yellow**: Claude is free, but a background agent is still running.
+- 🟢 **Green**: Claude has finished (or is waiting for you) and nothing is running.
 
 The widget is small, stays on top of other windows, never steals focus, and can be dragged anywhere. It remembers where you put it.
 
 <p align="center">
   <img src="docs/red.png" alt="Claude Light showing red: Claude is working" height="180">
   &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/yellow.png" alt="Claude Light showing yellow: a background agent is running" height="180">
+  &nbsp;&nbsp;&nbsp;&nbsp;
   <img src="docs/green.png" alt="Claude Light showing green: Claude has finished" height="180">
   <br>
-  <sub>Red: Claude is working &nbsp;·&nbsp; Green: Claude has finished</sub>
+  <sub>Red: Claude is working &nbsp;·&nbsp; Yellow: background agent running &nbsp;·&nbsp; Green: all quiet</sub>
 </p>
 
 ## How it works
@@ -26,10 +29,19 @@ Claude Code [hooks](https://docs.claude.com/en/docs/claude-code/hooks) call a sm
 | Hook event | Light |
 |---|---|
 | `UserPromptSubmit`, `PreToolUse`, `PostToolUse` | Red |
-| `Stop`, `Notification` | Green |
+| `Stop`, `Notification` | Green (or yellow if a background agent is running) |
+| `SubagentStart` / `SubagentStop` | A background agent starts / stops running |
 | `SessionEnd` | Session removed |
 
-With several Claude Code sessions open, the light is red if **any** session is working. A session that has been "working" for over 10 minutes with no events is treated as stale and no longer holds the light red, so a crashed session can't leave it stuck.
+| Claude busy? | Background agent running? | Light |
+|---|---|---|
+| yes | yes or no | Red |
+| no | yes | Yellow |
+| no | no | Green |
+
+Tool calls made by a background agent don't turn the light red, because Claude Code tags them with the agent's id; only Claude's own activity does.
+
+With several Claude Code sessions open, the light is red if **any** session is working, yellow if none is but any has an agent running. A session that has been "working" for over 10 minutes with no events is treated as stale and no longer holds the light red, and an agent that goes silent for 10 minutes is treated as stopped, so a crashed session or a lost event can't leave the light stuck.
 
 The hook is fast (about 16 ms median), always exits 0 and prints nothing, so it can't slow down or break Claude Code.
 
@@ -52,7 +64,7 @@ Grab `ClaudeLight-<version>-macos.zip` from the [latest release](https://github.
    ```
 
    (Or right-click the app, choose *Open*, then confirm.)
-3. Connect Claude Code, then restart any running Claude Code sessions:
+3. Connect Claude Code (run it again after upgrading, to add the background-agent hooks), then restart any running Claude Code sessions:
 
    ```bash
    /Applications/ClaudeLight.app/Contents/MacOS/claude-light-install install
@@ -106,9 +118,9 @@ The hooks use the absolute path of the app they were installed from. If you move
 
 ```bash
 swift build                      # debug build
-swift test                       # unit tests (state machine, parsing, installer, position)
+swift test                       # unit tests (state machine, parsing, installer, position, background agents)
 scripts/build-app.sh             # universal build/ClaudeLight.app (also run by CI on every push and PR)
-scripts/verify-render.sh         # render the widget red/green offscreen and check the pixels
+scripts/verify-render.sh         # render the widget red/yellow/green offscreen and check the pixels
 scripts/make-icns.sh             # regenerate Resources/AppIcon.icns
 ```
 
@@ -116,7 +128,7 @@ Handy flags and variables:
 
 | | |
 |---|---|
-| `ClaudeLight --snapshot out.png red\|green` | Render the widget to a PNG |
+| `ClaudeLight --snapshot out.png red\|yellow\|green` | Render the widget to a PNG |
 | `--selftest-quit`, `--selftest-drag`, `--selftest-login` | Check the right-click menu, dragging and the Start at Login toggle (`--selftest-login` flips the setting) |
 | `CLAUDE_LIGHT_SNAPSHOT_SCALE=6`, `CLAUDE_LIGHT_SNAPSHOT_TRANSPARENT=1` | Hi-res, transparent snapshots (how `docs/*.png` were made) |
 | `CLAUDE_LIGHT_DEBUG=1` | Log light changes to stderr |

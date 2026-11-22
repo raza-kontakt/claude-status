@@ -94,10 +94,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-// Offscreen snapshot mode for verification: claude-light-app --snapshot out.png red|green
+// Offscreen snapshot mode for verification: claude-light-app --snapshot out.png red|yellow|green
 @MainActor func snapshot(path: String, state: String) {
     let model = LightModel()
-    model.light = state == "red" ? .red : .green
+    model.light = state == "red" ? .red : (state == "yellow" ? .yellow : .green)
     // Optional env overrides for documentation shots; defaults match the pixel check (1x, white backdrop).
     let env = ProcessInfo.processInfo.environment
     let backdrop = env["CLAUDE_LIGHT_SNAPSHOT_TRANSPARENT"] != nil ? Color.clear : Color.white

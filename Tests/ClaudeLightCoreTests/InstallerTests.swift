@@ -64,4 +64,21 @@ final class InstallerTests: XCTestCase {
         let s = try String(contentsOf: file)
         XCTAssertTrue(s.contains("'/My Apps/claude-light-hook' Stop"))
     }
+
+    func testInstallCoversSubagentEvents() {
+        XCTAssertTrue(SettingsInstaller.events.contains("SubagentStart"))
+        XCTAssertTrue(SettingsInstaller.events.contains("SubagentStop"))
+    }
+
+    func testReinstallAddsNewEventsToAnOlderInstall() throws {
+        // An install made before subagent support: only the original six events.
+        let old = ["UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop", "Notification", "SessionEnd"]
+        var hooks: [String: Any] = [:]
+        for e in old { hooks[e] = [["matcher": "", "hooks": [["type": "command", "command": "'/opt/claude-light-hook' \(e)"]]]] }
+        try JSONSerialization.data(withJSONObject: ["hooks": hooks]).write(to: file)
+        try installer().install()
+        let after = try json()["hooks"] as! [String: Any]
+        XCTAssertEqual(Set(after.keys), Set(SettingsInstaller.events))
+        for e in old { XCTAssertEqual((after[e] as! [Any]).count, 1, "\(e) must not be duplicated") }
+    }
 }

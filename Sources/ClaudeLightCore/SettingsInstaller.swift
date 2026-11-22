@@ -12,7 +12,7 @@ public enum InstallerError: Error, Equatable, CustomStringConvertible {
 }
 
 public struct SettingsInstaller {
-    public static let events = ["UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop", "Notification", "SessionEnd"]
+    public static let events = ["UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop", "Notification", "SubagentStart", "SubagentStop", "SessionEnd"]
     public static let marker = "claude-light-hook"
 
     public let settingsURL: URL
